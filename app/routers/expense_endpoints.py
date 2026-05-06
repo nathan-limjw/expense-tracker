@@ -6,7 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Expense, User
+from app.models.expense import Expense
+from app.models.user import User
 from app.schemas.expense_schema import ExpenseCreate, ExpenseResponse, ExpenseUpdate
 from utils.logger import get_logger
 

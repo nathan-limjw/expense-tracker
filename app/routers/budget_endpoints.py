@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Budget, User
+from app.models.budget import Budget
+from app.models.user import User
 from app.schemas.budget_schema import BudgetCreate, BudgetResponse, BudgetUpdate
 from utils.logger import get_logger
 
