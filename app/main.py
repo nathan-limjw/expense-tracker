@@ -6,10 +6,14 @@ from app.db.database import init_db
 from app.routers.budget_endpoints import budget_router
 from app.routers.expense_endpoints import expense_router
 from app.routers.user_endpoints import user_router
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Initialising application...")
     init_db()
     yield
 
