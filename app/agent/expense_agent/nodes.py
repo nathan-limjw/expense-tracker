@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 
 from app.agent.expense_agent.prompts import EXTRACTION_PROMPT, RETRY_EXTRACTION_PROMPT
@@ -27,9 +27,10 @@ llm = ChatOllama(
 
 def extraction_node(state: ExpenseAgentState):
     structured_llm = llm.with_structured_output(ExtractedExpense)
-    expense_description = state["messages"][-1]
+    expense_description = state["input"].description
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     logger.debug(f"Today's time: {today}")
+    logger.debug(f"Expense description: {expense_description}")
 
     if state["iterations"] > 0:
         logger.info(f"[ATTEMPT {state['iterations'] + 1}] Retrying extraction... ")
@@ -39,7 +40,7 @@ def extraction_node(state: ExpenseAgentState):
         response = structured_llm.invoke(
             [
                 SystemMessage(filled_retry_extraction_prompt),
-                expense_description,
+                HumanMessage(expense_description),
             ]
         )
 
@@ -47,7 +48,7 @@ def extraction_node(state: ExpenseAgentState):
         logger.info("Extracting information...")
         filled_extraction_prompt = EXTRACTION_PROMPT.format(current_date=today)
         response = structured_llm.invoke(
-            [SystemMessage(filled_extraction_prompt), expense_description]
+            [SystemMessage(filled_extraction_prompt), HumanMessage(expense_description)]
         )
 
     return {
