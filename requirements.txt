@@ -4,3 +4,6 @@ fastapi
 uvicorn
 pydantic[email]
 python-dotenv
+langchain-ollama
+langchain-core
+langgraph
