@@ -92,11 +92,11 @@ def validation_node(state: ExpenseAgentState):
 
 
 def decision_node(state: ExpenseAgentState) -> Literal["END", "extraction"]:
-    if not state["flagged"]:
+    if not state["flagged"]:  # successful after one attempt of extraction
         return "END"
-    if state["iterations"] >= 3:
+    if state["iterations"] >= 3:  # more than 3 tries
         logger.warning(
             "Maximum attempts reached. Please check your input and try again!"
         )
         return "END"
-    return "extraction"
+    return "extraction"  # have yet to reach 3 attempts of extraction
