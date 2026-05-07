@@ -1,4 +1,3 @@
-from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.expense_agent.nodes import (
@@ -7,6 +6,7 @@ from app.agent.expense_agent.nodes import (
     validation_node,
 )
 from app.agent.expense_agent.schemas import ExpenseAgentState
+from app.schemas.expense_schema import ExpenseCreate
 
 
 def create_extraction_agent_graph():
@@ -30,8 +30,10 @@ if __name__ == "__main__":
     graph = create_extraction_agent_graph()
     response = graph.invoke(
         {
-            "user_id": "kim",
-            "messages": [HumanMessage("Spent -20 on koufu lunch 3 days ago")],
+            "input": ExpenseCreate(
+                description="Spend $5 on lunch",
+                user_id="c453f22b-f000-4102-a083-3be74a6ce959",
+            ),
             "iterations": 0,
         }
     )
