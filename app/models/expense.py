@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
@@ -22,7 +22,7 @@ class Expense(Base):
     amount = Column(Float)
     category = Column(String)
     description = Column(String, nullable=False)
-    date = Column(DateTime, default=datetime.now)
+    date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     confidence_score = Column(Float)
     flagged = Column(Boolean, default=False)
 

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column,
@@ -19,8 +19,10 @@ class User(Base):
     name = Column(String)
     email = Column(String, unique=True)
     monthly_budget = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, nullable=True, onupdate=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     expenses = relationship("Expense", back_populates="spender")
     budgets = relationship("Budget", back_populates="spender")
