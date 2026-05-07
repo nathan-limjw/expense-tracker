@@ -2,10 +2,13 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.agent.expense_agent.graph import create_extraction_agent_graph
 from app.db.database import get_db
+from app.models.budget import Budget
 from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense_schema import ExpenseCreate, ExpenseResponse, ExpenseUpdate
@@ -14,6 +17,8 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 expense_router = APIRouter(prefix="/expenses")
+
+graph = create_extraction_agent_graph()
 
 
 @expense_router.get("/", response_model=List[ExpenseResponse])
@@ -92,7 +97,106 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
             status_code=404, detail="User not found, create a user first!"
         )
 
-    return
+    input_state = {
+        "input": expense,
+        "iterations": 0,
+    }
+
+    try:
+        logger.info("Invoking expense extraction agent...")
+        response = graph.invoke(input_state)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.exception("Unexpected error during graph execution!")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if response["flagged"]:
+        logger.warning("Expense flagged by agent!")
+        raise HTTPException(status_code=422, detail=response["flagged_reason"])
+
+    if not response["extracted_info"]:
+        logger.error("Failed to extract expense information!")
+        raise HTTPException(
+            status_code=500, detail="Failed to extract expense information"
+        )
+
+    try:
+        new_expense = Expense(
+            user_id=expense.user_id,
+            amount=response["extracted_info"].amount,
+            category=response["extracted_info"].category,
+            description=response["extracted_info"].extracted_description,
+            date=response["extracted_info"].date,
+            confidence_score=response["extracted_info"].confidence_score,
+            flagged=response["flagged"],
+        )
+
+        db.add(new_expense)
+        db.commit()
+        db.refresh(new_expense)
+
+        current_month = new_expense.date.strftime("%Y-%m")
+
+        if user.monthly_budget:
+            total_spending_by_month = (
+                db.query(func.sum(Expense.amount))
+                .filter(
+                    Expense.user_id == expense.user_id,
+                    func.strftime("%Y-%m", Expense.date) == current_month,
+                )
+                .scalar()
+                or 0.0
+            )
+
+            if total_spending_by_month > user.monthly_budget:
+                logger.warning(
+                    f"Heads up! You have exceeded your monthly budget of ${user.monthly_budget:.2f} by ${(total_spending_by_month - user.monthly_budget):.2f}!"
+                )
+            else:
+                logger.info(
+                    f"You have spent ${total_spending_by_month:.2f} out of your total monthly budget of ${user.monthly_budget:.2f}!"
+                )
+
+        monthly_budget_for_category = (
+            db.query(Budget)
+            .filter(
+                Budget.user_id == expense.user_id,
+                Budget.category == new_expense.category,
+                Budget.month == current_month,
+            )
+            .first()
+        )
+
+        if monthly_budget_for_category:
+            total_spending_by_category_by_month = (
+                db.query(func.sum(Expense.amount))
+                .filter(
+                    Expense.user_id == expense.user_id,
+                    Expense.category == new_expense.category,
+                    func.strftime("%Y-%m", Expense.date) == current_month,
+                )
+                .scalar()
+            ) or 0
+
+            if total_spending_by_category_by_month > monthly_budget_for_category.limit:
+                logger.warning(
+                    f"Heads up! You have exceeded your monthly budget of ${monthly_budget_for_category.limit:.2f} for {new_expense.category} by ${(total_spending_by_category_by_month - monthly_budget_for_category.limit):.2f}!"
+                )
+            else:
+                logger.info(
+                    f"You have spent ${total_spending_by_category_by_month:.2f} out of your monthly budget for {new_expense.category} of ${monthly_budget_for_category.limit:.2f}!"
+                )
+
+        return new_expense
+
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception("Database error occurred!")
+        raise HTTPException(status_code=500, detail="Database error occurred!")
 
 
 @expense_router.put("/{expense_id}", response_model=ExpenseResponse)
@@ -111,8 +215,6 @@ def update_expense(
 
         for key, value in update_data.items():
             setattr(retrieved_expense, key, value)
-
-        retrieved_expense.date = datetime.now()
 
         db.commit()
         db.refresh(retrieved_expense)
