@@ -2,7 +2,6 @@ import uuid
 
 from sqlalchemy import (
     Column,
-    DateTime,
     Float,
     ForeignKey,
     String,
@@ -19,7 +18,7 @@ class Budget(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id"))
     category = Column(String)
-    month = Column(DateTime)
+    month = Column(String)
     limit = Column(Float)
 
     spender = relationship("User", back_populates="budgets")
