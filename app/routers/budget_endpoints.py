@@ -64,7 +64,7 @@ def create_category_budget(budget: BudgetCreate, db: Session = Depends(get_db)):
         db.refresh(new_budget)
 
         logger.info(
-            f"Successfully created new budget for category: {budget.category}, month: {budget.month}"
+            f"Successfully created new budget for category: {budget.category}, month: {budget.month}, limit: {budget.limit}"
         )
         return new_budget
 
@@ -86,7 +86,7 @@ def update_category_budget(
 ):
     try:
         logger.info(
-            f"Creating a new budget for category: {new_budget.category}, month: {new_budget.month}..."
+            f"Updating budget for category: {new_budget.category}, month: {new_budget.month}..."
         )
         user = db.query(User).filter(User.id == user_id).first()
 
@@ -116,7 +116,7 @@ def update_category_budget(
         db.refresh(budget_to_update)
 
         logger.info(
-            f"Successfully updated budget for category: {new_budget.category}, month: {new_budget.month}"
+            f"Successfully updated budget for category: {new_budget.category}, month: {new_budget.month}, limit: {new_budget.limit}"
         )
 
         return budget_to_update
