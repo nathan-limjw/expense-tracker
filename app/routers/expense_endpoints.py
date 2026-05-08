@@ -11,7 +11,12 @@ from app.db.database import get_db
 from app.models.budget import Budget
 from app.models.expense import Expense
 from app.models.user import User
-from app.schemas.expense_schema import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.schemas.expense_schema import (
+    ExpenseCreate,
+    ExpenseCreateResponse,
+    ExpenseResponse,
+    ExpenseUpdate,
+)
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -82,7 +87,7 @@ def get_expense_by_id(expense_id: str, db: Session = Depends(get_db)):
     return retrieved_expense
 
 
-@expense_router.post("/", response_model=ExpenseResponse)
+@expense_router.post("/", response_model=ExpenseCreateResponse)
 def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
     logger.info("Creating expense...")
     try:
@@ -125,6 +130,7 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
         )
 
     try:
+        messages = []
         new_expense = Expense(
             user_id=expense.user_id,
             amount=response["extracted_info"].amount,
@@ -153,11 +159,15 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
             )
 
             if total_spending_by_month > user.monthly_budget:
-                logger.warning(
+                messages.append(
                     f"Heads up! You have exceeded your monthly budget of ${user.monthly_budget:.2f} by ${(total_spending_by_month - user.monthly_budget):.2f}!"
                 )
+            elif total_spending_by_month > 0.8 * user.monthly_budget:
+                messages.append(
+                    f"You have spent {(total_spending_by_month * 80 / user.monthly_budget):.2f}% of your monthly budget!"
+                )
             else:
-                logger.info(
+                messages.append(
                     f"You have spent ${total_spending_by_month:.2f} out of your total monthly budget of ${user.monthly_budget:.2f}!"
                 )
 
@@ -183,15 +193,22 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
             ) or 0
 
             if total_spending_by_category_by_month > monthly_budget_for_category.limit:
-                logger.warning(
+                messages.append(
                     f"Heads up! You have exceeded your monthly budget of ${monthly_budget_for_category.limit:.2f} for {new_expense.category} by ${(total_spending_by_category_by_month - monthly_budget_for_category.limit):.2f}!"
                 )
+            elif (
+                total_spending_by_category_by_month
+                > 0.8 * monthly_budget_for_category.limit
+            ):
+                messages.append(
+                    f"You have spent {(total_spending_by_category_by_month * 80 / monthly_budget_for_category.limit):.2f}% of your monthly budget for category: {new_expense.category}!"
+                )
             else:
-                logger.info(
+                messages.append(
                     f"You have spent ${total_spending_by_category_by_month:.2f} out of your monthly budget for {new_expense.category} of ${monthly_budget_for_category.limit:.2f}!"
                 )
 
-        return new_expense
+        return ExpenseCreateResponse(expense=new_expense, messages=messages)
 
     except SQLAlchemyError:
         db.rollback()
