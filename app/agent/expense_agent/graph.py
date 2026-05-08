@@ -9,7 +9,7 @@ from app.agent.expense_agent.schemas import ExpenseAgentState
 from app.schemas.expense_schema import ExpenseCreate
 
 
-def create_extraction_agent_graph():
+def create_expense_agent_graph():
     builder = StateGraph(ExpenseAgentState)
 
     builder.add_node("extraction", extraction_node)
@@ -27,7 +27,7 @@ def create_extraction_agent_graph():
 
 
 if __name__ == "__main__":
-    graph = create_extraction_agent_graph()
+    graph = create_expense_agent_graph()
     response = graph.invoke(
         {
             "input": ExpenseCreate(

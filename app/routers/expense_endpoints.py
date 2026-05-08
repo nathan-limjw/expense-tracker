@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.agent.expense_agent.graph import create_extraction_agent_graph
+from app.agent.expense_agent.graph import create_expense_agent_graph
 from app.db.database import get_db
 from app.models.budget import Budget
 from app.models.expense import Expense
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 expense_router = APIRouter(prefix="/expenses")
 
-graph = create_extraction_agent_graph()
+graph = create_expense_agent_graph()
 
 
 @expense_router.get("/", response_model=List[ExpenseResponse])
