@@ -23,6 +23,11 @@ class ExpenseResponse(ExpenseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ExpenseCreateResponse(BaseModel):
+    expense: ExpenseResponse
+    messages: list[str] = []
+
+
 class ExpenseUpdate(BaseModel):
     amount: float | None = None
     category: str | None = None
