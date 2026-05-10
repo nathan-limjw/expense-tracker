@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BudgetBase(BaseModel):
     category: str
     month: str
-    limit: float
+    limit: float = Field(default=0.1, gt=0)
     user_id: str
 
     @field_validator("month")
@@ -32,7 +32,7 @@ class BudgetResponse(BudgetBase):
 class BudgetUpdate(BaseModel):
     category: str
     month: str
-    limit: float
+    limit: float = Field(default=0.1, gt=0)
 
     @field_validator("month")
     @classmethod
