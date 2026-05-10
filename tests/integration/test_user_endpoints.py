@@ -66,7 +66,7 @@ class TestCreateUser:
 
     def test_create_invalid_email(self, client):
         """
-        Tests that a Pydantic validation error (422) is thrown when an invalid email is used to create a user
+        Tests that a 422 error is thrown when an invalid email is used to create a user
         """
         response = client.post(
             "/users/",
@@ -77,7 +77,7 @@ class TestCreateUser:
 
     def test_create_invalid_budget(self, client):
         """
-        Tests that a Pydantic validation error (422) is thrown when an invalid budget is used to create a user
+        Tests that a 422 error is thrown when an invalid budget is used to create a user
         """
         response = client.post(
             "/users/",
@@ -102,7 +102,7 @@ class TestCreateUser:
 
 
 class TestUpdateUser:
-    def test_update_existing_user(self, client, generate_test_user):
+    def test_successful_update_of_existing_user(self, client, generate_test_user):
         """
         Tests successful update of an existing user by checking if the 'monthly_budget' attribute of the response object has been updated
         """
@@ -130,7 +130,7 @@ class TestUpdateUser:
 
     def test_update_with_invalid_monthly_budget(self, client, generate_test_user):
         """
-        Tests that a Pydantic validation error (422) will be thrown when updating existing user information with invalid values
+        Tests that a 422 error will be thrown when updating existing user information with invalid values
         """
         existent_user_id = generate_test_user["id"]
         response = client.put(
