@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.database import Base, get_db
 from app.main import app
+from app.schemas.budget_schema import BudgetCreate
 from app.schemas.user_schema import UserCreate
 
 
@@ -85,3 +86,13 @@ def generate_test_user(client):
     test_user = UserCreate(name="kimmy", email="kimmy@gmail.com", monthly_budget=1000)
     created_test_user = client.post("/users/", json=test_user.model_dump())
     return created_test_user.json()
+
+
+@pytest.fixture
+def generate_test_budget(client, generate_test_user):
+    test_id = generate_test_user["id"]
+    test_budget = BudgetCreate(
+        category="Food", month="2026-05", limit=200, user_id=test_id
+    )
+    created_test_budget = client.post("/budgets/", json=test_budget.model_dump())
+    return created_test_budget.json()
