@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
@@ -31,11 +31,19 @@ def get_expense_by_filter(
     user_id: str,
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
-    less_than_amount: float | None = Query(default=None),
-    category: str | None = Query(default=None),
+    less_than_amount: float | None = Query(default=None, gt=0),
+    category: Literal[
+        "Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"
+    ]
+    | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     logger.info("Initialising searching workflow...")
+
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=422, detail="start_date cannot be after end_date"
+        )
     try:
         user = db.query(User).filter(User.id == user_id).first()
     except SQLAlchemyError:
@@ -119,15 +127,15 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
         logger.exception("Unexpected error during graph execution!")
         raise HTTPException(status_code=500, detail=str(e))
 
-    if response["flagged"]:
-        logger.warning("Expense flagged by agent!")
-        raise HTTPException(status_code=422, detail=response["flagged_reason"])
-
     if not response["extracted_info"]:
         logger.error("Failed to extract expense information!")
         raise HTTPException(
             status_code=500, detail="Failed to extract expense information"
         )
+
+    if response["flagged"]:
+        logger.warning("Expense flagged by agent!")
+        raise HTTPException(status_code=422, detail=response["flagged_reason"])
 
     try:
         messages = []
