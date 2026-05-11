@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExpenseBase(BaseModel):
@@ -15,7 +16,9 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseResponse(ExpenseBase):
     id: str
     amount: float
-    category: str
+    category: Literal[
+        "Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"
+    ]
     date: datetime
     confidence_score: float
     flagged: bool
@@ -29,12 +32,18 @@ class ExpenseCreateResponse(BaseModel):
 
 
 class ExpenseUpdate(BaseModel):
-    amount: float | None = None
-    category: str | None = None
+    amount: float | None = Field(default=None, gt=0)
+    category: (
+        Literal["Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"]
+        | None
+    ) = None
 
 
 class ExpenseFilter(BaseModel):
     start_date: datetime | None = None
     end_date: datetime | None = None
-    less_than_amount: float | None = None
-    category: str | None = None
+    less_than_amount: float | None = Field(default=None, gt=0)
+    category: (
+        Literal["Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"]
+        | None
+    ) = None

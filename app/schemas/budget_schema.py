@@ -1,10 +1,13 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BudgetBase(BaseModel):
-    category: str
+    category: Literal[
+        "Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"
+    ]
     month: str
     limit: float = Field(default=0.1, gt=0)
     user_id: str
@@ -30,7 +33,9 @@ class BudgetResponse(BudgetBase):
 
 
 class BudgetUpdate(BaseModel):
-    category: str
+    category: Literal[
+        "Food", "Transport", "Shopping", "Utilities", "Entertainment", "Others"
+    ]
     month: str
     limit: float = Field(default=0.1, gt=0)
 
