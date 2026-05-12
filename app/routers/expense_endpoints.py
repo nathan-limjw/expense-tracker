@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.agent.expense_agent.graph import create_expense_agent_graph
-from app.db.database import get_db
+from app.db.database import engine, get_db
 from app.models.budget import Budget
 from app.models.expense import Expense
 from app.models.user import User
@@ -17,6 +17,7 @@ from app.schemas.expense_schema import (
     ExpenseResponse,
     ExpenseUpdate,
 )
+from utils.db_helpers import format_month
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -160,7 +161,7 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
                 db.query(func.sum(Expense.amount))
                 .filter(
                     Expense.user_id == expense.user_id,
-                    func.strftime("%Y-%m", Expense.date) == current_month,
+                    format_month(Expense.date, engine) == current_month,
                 )
                 .scalar()
                 or 0.0
@@ -195,7 +196,7 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
                 .filter(
                     Expense.user_id == expense.user_id,
                     Expense.category == new_expense.category,
-                    func.strftime("%Y-%m", Expense.date) == current_month,
+                    format_month(Expense.date, engine) == current_month,
                 )
                 .scalar()
             ) or 0
