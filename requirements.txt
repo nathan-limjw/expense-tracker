@@ -9,3 +9,4 @@ langchain-core
 langgraph
 pytest
 pytest-mock
+pydantic-settings
