@@ -1,0 +1,37 @@
+name: CI - Run Tests
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        env:
+          APP_ENV: dev
+          DATABASE_URL: sqlite:///./app/db/test.db
+          OLLAMA_MODEL: llama3.2:3b
+          OLLAMA_BASE_URL: http://localhost:11434
+          MODEL_TEMPERATURE: 0
+          CONFIDENCE_THRESHOLD: 0.75
+          LOG_LEVEL: DEBUG
+        run: |
+          pytest tests/ -v
