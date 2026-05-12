@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # Ollama (dev only)
     OLLAMA_MODEL: str = "llama3.2:3b"
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
 
     # Bedrock (prod only)
     AWS_REGION: str = "ap-southeast-1"
