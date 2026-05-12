@@ -125,16 +125,16 @@ def generate_multiple_expenses(client, generate_test_user, mocker, mock_llm):
     expenses = []
 
     test_descriptions = [
-        ("Coffee for $2 after lunch 11 May 2026", "Food", 2.0),
-        ("Noodle Soup $6 after gym 11 May 2026", "Food", 6.0),
-        ("Concession pass $81 10 May 2026", "Transport", 81.0),
-        ("Groceries from NTUC $45 10 May 2026", "Shopping", 45.0),
-        ("Credit Card bill $30.60 11 May 2026", "Utilities", 30.60),
+        ("Coffee for $2 after lunch 11 May 2026", "Food", 2.0, "2026-05-11"),
+        ("Noodle Soup $6 after gym 11 May 2026", "Food", 6.0, "2026-05-11"),
+        ("Concession pass $81 10 May 2026", "Transport", 81.0, "2026-05-10"),
+        ("Groceries from NTUC $45 10 May 2026", "Shopping", 45.0, "2026-05-10"),
+        ("Credit Card bill $30.60 11 May 2026", "Utilities", 30.60, "2026-05-11"),
     ]
 
-    for description, category, amount in test_descriptions:
+    for description, category, amount, date in test_descriptions:
         setup_mock(
-            populate_extracted_expense(category=category, amount=amount),
+            populate_extracted_expense(category=category, amount=amount, date=date),
             mocker,
             mock_llm,
         )
