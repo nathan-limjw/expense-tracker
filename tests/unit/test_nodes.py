@@ -10,7 +10,7 @@ from tests.test_helpers import (
     populate_extracted_expense,
     setup_mock,
 )
-from utils.config import CONFIDENCE_THRESHOLD
+from utils.config import settings
 
 ## Helper Functions
 
@@ -165,7 +165,7 @@ class TestValidationNode:
         """
         input_state = {
             "extracted_info": populate_extracted_expense(
-                confidence_score=(0.5 * CONFIDENCE_THRESHOLD)
+                confidence_score=(0.5 * settings.CONFIDENCE_THRESHOLD)
             )
         }
         result = validation_node(input_state)
@@ -182,7 +182,7 @@ class TestValidationNode:
         """
         input_state = {
             "extracted_info": populate_extracted_expense(
-                confidence_score=CONFIDENCE_THRESHOLD
+                confidence_score=settings.CONFIDENCE_THRESHOLD
             )
         }
         result = validation_node(input_state)

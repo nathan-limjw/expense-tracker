@@ -10,12 +10,7 @@ from app.agent.expense_agent.schemas import (
     ExpenseAgentState,
     ExtractedExpense,
 )
-from utils.config import (
-    CONFIDENCE_THRESHOLD,
-    MODEL_TEMPERATURE,
-    OLLAMA_BASE_URL,
-    OLLAMA_MODEL,
-)
+from utils.config import settings
 from utils.logger import get_logger
 
 load_dotenv()
@@ -24,7 +19,9 @@ logger = get_logger(__name__)
 
 
 llm = ChatOllama(
-    model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL, temperature=MODEL_TEMPERATURE
+    model=settings.OLLAMA_MODEL,
+    base_url=settings.OLLAMA_BASE_URL,
+    temperature=settings.MODEL_TEMPERATURE,
 )
 
 
@@ -86,7 +83,7 @@ def validation_node(state: ExpenseAgentState):
             "flagged_reason": "Could not determine a category. Be more specific.",
         }
 
-    if extracted_info.confidence_score < CONFIDENCE_THRESHOLD:
+    if extracted_info.confidence_score < settings.CONFIDENCE_THRESHOLD:
         return {
             "flagged": True,
             "flagged_reason": "Input was unclear. Please rephrase and try again.",
