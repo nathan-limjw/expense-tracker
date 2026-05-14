@@ -38,6 +38,7 @@ llm = get_llm()
 
 
 def extraction_node(state: ExpenseAgentState):
+    logger.info("[EXTRACTION NODE] Extracting information from expense...")
     structured_llm = llm.with_structured_output(ExtractedExpense)
     expense_description = state["input"].description
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -45,7 +46,7 @@ def extraction_node(state: ExpenseAgentState):
     logger.debug(f"Expense description: {expense_description}")
 
     if state["iterations"] > 0:
-        logger.info(f"[ATTEMPT {state['iterations'] + 1}] Retrying extraction... ")
+        logger.info(f"ATTEMPT {state['iterations'] + 1}: Retrying extraction... ")
         filled_retry_extraction_prompt = RETRY_EXTRACTION_PROMPT.format(
             flagged_reason=state["flagged_reason"], current_date=today
         )
@@ -57,7 +58,7 @@ def extraction_node(state: ExpenseAgentState):
         )
 
     else:
-        logger.info("Extracting information...")
+        logger.info(f"ATTEMPT {state['iterations'] + 1}: Extracting information...")
         filled_extraction_prompt = EXTRACTION_PROMPT.format(current_date=today)
         response = structured_llm.invoke(
             [SystemMessage(filled_extraction_prompt), HumanMessage(expense_description)]
@@ -72,7 +73,7 @@ def extraction_node(state: ExpenseAgentState):
 
 
 def validation_node(state: ExpenseAgentState):
-    logger.info("Validating information...")
+    logger.info("[VALIDATION NODE] Validating information...")
 
     extracted_info = state["extracted_info"]
     logger.debug(f"Extracted info: {extracted_info}")
@@ -105,11 +106,14 @@ def validation_node(state: ExpenseAgentState):
 
 
 def decision_node(state: ExpenseAgentState) -> Literal["END", "extraction"]:
+    logger.info("[DECISION NODE] Routing...")
     if not state["flagged"]:  # successful after one attempt of extraction
+        logger.info("Extraction successful!")
         return "END"
     if state["iterations"] >= 3:  # more than 3 tries
         logger.warning(
             "Maximum attempts reached. Please check your input and try again!"
         )
         return "END"
+    logger.info("Extraction unsuccessful, initialising extraction again...")
     return "extraction"  # have yet to reach 3 attempts of extraction
