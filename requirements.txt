@@ -12,3 +12,5 @@ pytest-mock
 pydantic-settings
 langchain-aws
 psycopg2-binary
+matplotlib
+numpy
