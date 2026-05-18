@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Bedrock (prod only)
     AWS_REGION: str = "ap-southeast-1"
     BEDROCK_MODEL_ID: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    S3_BUCKET_NAME: str = "nat-expense-tracker-reports"
 
     # Shared Configs
     MODEL_TEMPERATURE: float = 0.0
