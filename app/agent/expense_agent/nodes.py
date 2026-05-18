@@ -2,36 +2,20 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from dotenv import load_dotenv
-from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
 
 from app.agent.expense_agent.prompts import EXTRACTION_PROMPT, RETRY_EXTRACTION_PROMPT
 from app.agent.expense_agent.schemas import (
     ExpenseAgentState,
     ExtractedExpense,
 )
+from app.agent.setup_llm import get_llm
 from utils.config import settings
 from utils.logger import get_logger
 
 load_dotenv()
 
 logger = get_logger(__name__)
-
-
-def get_llm():
-    if settings.APP_ENV == "prod":
-        return ChatBedrockConverse(
-            model=settings.BEDROCK_MODEL_ID,
-            region_name=settings.AWS_REGION,
-            temperature=settings.MODEL_TEMPERATURE,
-        )
-    else:
-        return ChatOllama(
-            model=settings.OLLAMA_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
-            temperature=settings.MODEL_TEMPERATURE,
-        )
 
 
 llm = get_llm()
