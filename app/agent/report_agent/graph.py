@@ -1,11 +1,9 @@
 from langgraph.graph import END, START, StateGraph
 
-from app.agent.report_agent.nodes import (
-    accountant_node,
-    analyst_node,
-    presenter_node,
-    visualiser_node,
-)
+from app.agent.report_agent.nodes.accountant_node import accountant_node
+from app.agent.report_agent.nodes.analyst_node import analyst_node
+from app.agent.report_agent.nodes.presenter_node import presenter_node
+from app.agent.report_agent.nodes.visualiser_node import visualiser_node
 from app.agent.report_agent.schemas import ReportAgentState
 
 
