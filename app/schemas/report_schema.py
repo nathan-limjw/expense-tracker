@@ -17,3 +17,22 @@ class ReportCreate(BaseModel):
         except ValueError:
             raise ValueError("month must be in YYYY-MM format")
         return v
+
+
+class CategoryReport(BaseModel):
+    category: str
+    spent: float
+    budget: float | None
+    variance: float | None
+    variance_pct: float | None
+
+
+class ReportResponse(BaseModel):
+    month: str
+    total_spent: float
+    monthly_budget: float | None
+    days_in_period: int
+    current_day: int
+    categories: list[CategoryReport]
+    summary: str
+    charts: dict
