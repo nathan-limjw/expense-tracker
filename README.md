@@ -1,17 +1,14 @@
 # 💸 Expense Tracker
 
-An AI-powered expense tracking API that lets users log expenses in natural language. Built with FastAPI, LangGraph, and LLM-based extraction (Ollama for local dev, AWS Bedrock in production).
+An AI-powered expense tracking API that lets users log expenses in plain natural language. The agent automatically extracts the amount, category, date, and description — no forms, no dropdowns.
 
 ---
 
-## Features
+## What I Built & Why
 
-- **Natural language expense logging** — just describe what you spent ("Grabbed a coffee for $4.50 after gym") and the agent extracts the amount, category, date, and description automatically
-- **LangGraph agent pipeline** — extraction → validation → retry loop with up to 3 attempts before flagging
-- **Budget tracking** — set monthly budgets globally and per category, with alerts when approaching or exceeding limits
-- **Flexible filtering** — query expenses by date range, category, or amount
-- **Dual LLM backend** — Ollama (local dev) and AWS Bedrock Claude (production)
-- **Full test coverage** — unit, agent, and integration tests across all endpoints
+Most expense trackers make you fill in structured fields. I wanted to explore whether an LLM agent could handle that extraction reliably — and what it takes to make that production-ready.
+
+This project is a backend API with a LangGraph-powered extraction pipeline, budget alerting, full test coverage, and an automated CI/CD setup deploying to AWS EC2.
 
 ---
 
@@ -27,6 +24,35 @@ An AI-powered expense tracking API that lets users log expenses in natural langu
 | ORM | SQLAlchemy |
 | Validation | Pydantic v2 |
 | Testing | Pytest + pytest-mock |
+| CI/CD | GitHub Actions → ECR → EC2 |
+
+---
+
+## Agent Pipeline
+
+The core of the project is a LangGraph state machine that processes natural language expense input through three nodes:
+
+```
+START → extraction → validation → decision
+                          ↑            |
+                          └─ retry ────┘ (max 3 attempts)
+                                        └→ END
+```
+
+1. **Extraction** — LLM pulls out amount, category, date, description, and a confidence score from raw input
+2. **Validation** — rejects null/invalid fields and inputs below the confidence threshold (default: 0.75)
+3. **Decision** — on failure, injects the specific failure reason back into the retry prompt and loops; gives up after 3 attempts
+
+This means the agent self-corrects with targeted feedback rather than just retrying blindly.
+
+---
+
+## Features
+
+- **Natural language logging** — "Grabbed lunch at a hawker centre for $5.50" → extracts everything automatically
+- **Budget alerts** — set a monthly budget globally or per category; get warnings at 80% and 100% spend
+- **Flexible filtering** — query expenses by date range, category, or amount ceiling
+- **Dual LLM backend** — Ollama locally, AWS Bedrock in production, swapped via a single env var
 
 ---
 
@@ -52,26 +78,9 @@ An AI-powered expense tracking API that lets users log expenses in natural langu
 │   └── logger.py
 └── tests/
     ├── unit/                   # Node-level unit tests
-    ├── agent/                  # End-to-end graph tests
-    └── integration/            # API endpoint tests
+    ├── agent/                  # End-to-end graph traversal tests
+    └── integration/            # Full HTTP request/response tests
 ```
-
----
-
-## Agent Pipeline
-
-The expense agent runs as a LangGraph state machine with three nodes:
-
-```
-START → extraction → validation → decision
-                          ↑            |
-                          └─ retry ────┘ (max 3 attempts)
-                                        └→ END
-```
-
-1. **Extraction** — LLM extracts amount, category, date, description, and confidence score from the raw input
-2. **Validation** — checks for null/invalid fields and confidence below threshold (default: 0.75)
-3. **Decision** — routes to END on success, or back to extraction (with the failure reason injected into the retry prompt) up to 3 times
 
 ---
 
@@ -102,71 +111,29 @@ START → extraction → validation → decision
 
 ---
 
-## Getting Started
+## Testing
 
-### Prerequisites
-
-- Python 3.11+
-- [Ollama](https://ollama.com) running locally (dev)
-- Docker (optional)
-
-### Installation
-
-```bash
-git clone https://github.com/your-username/expense-tracker.git
-cd expense-tracker
-pip install -r requirements.txt
-```
-
-### Configuration
-
-Create a `.env` file in the project root:
-
-```env
-APP_ENV=dev
-DATABASE_URL=sqlite:///./app/db/test.db
-LOG_LEVEL=DEBUG
-
-# Ollama (dev)
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_BASE_URL=http://localhost:11434
-
-# Bedrock (prod)
-AWS_REGION=ap-southeast-1
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-
-# Agent
-CONFIDENCE_THRESHOLD=0.75
-MODEL_TEMPERATURE=0.0
-```
-
-### Run
-
-```bash
-uvicorn app.main:app --reload
-```
-
-API docs available at `http://localhost:8000/docs`.
-
----
-
-## Running Tests
+Tests are structured across three layers, with the LLM mocked out for deterministic results:
 
 ```bash
 pytest
 ```
 
-Tests are structured across three layers:
-
-- `tests/unit/` — individual node logic (extraction, validation, decision)
-- `tests/agent/` — full LangGraph graph traversal (mocked LLM)
-- `tests/integration/` — full HTTP request/response cycle per endpoint
+- `tests/unit/` — individual node logic (extraction, validation, decision routing)
+- `tests/agent/` — full LangGraph graph traversal with mocked LLM responses
+- `tests/integration/` — full HTTP request/response cycle per endpoint, including error paths
 
 ---
 
-## Expense Categories
+## CI/CD
 
-`Food` · `Transport` · `Shopping` · `Utilities` · `Entertainment` · `Others`
+Automated via two GitHub Actions workflows:
+
+**CI** — runs on every push to `dev` and `main`, executes the full test suite
+
+**CD** — triggers automatically after CI passes on `main`; builds a Docker image, pushes to Amazon ECR, SSHs into EC2, and restarts the container
+
+Deployments only happen when all tests pass.
 
 ---
 
@@ -174,33 +141,6 @@ Tests are structured across three layers:
 
 - [x] Natural language expense extraction with LangGraph
 - [x] Per-category and monthly budget alerts
-- [x] Retry loop with targeted failure feedback
+- [x] Self-correcting retry loop with targeted failure feedback
+- [x] Automated CI/CD to AWS EC2
 - [ ] **Financial Report Agent** *(coming soon)* — AI-generated monthly summaries with spending insights, trends, and budget recommendations
-
----
-
-## Project Folder Structure
-
-```
-expense-tracker/
-├── app/
-│   ├── main.py               # FastAPI entry point
-│   ├── models/               # SQLAlchemy models
-│   ├── schemas/              # Pydantic request/response schemas
-│   ├── routers/              # FastAPI route handlers
-│   ├── agent/                # LangGraph nodes and graph definition
-│   ├── services/             # Bedrock extraction, budget logic
-│   └── db/                   # DB connection, migrations
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── agent/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── docker/
-│   └── Dockerfile
-├── requirements.txt
-└── README.md
-```
-
