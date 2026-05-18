@@ -10,8 +10,11 @@ from app.db.database import Base, get_db
 from app.main import app
 from app.schemas.budget_schema import BudgetCreate
 from app.schemas.expense_schema import ExpenseCreate
+from app.schemas.report_schema import ReportCreate
 from app.schemas.user_schema import UserCreate
 from tests.test_helpers import populate_extracted_expense, setup_mock
+
+# Expense Agent Fixtures
 
 
 @pytest.fixture
@@ -22,6 +25,68 @@ def mock_expense_llm(mocker):
 @pytest.fixture
 def mock_expense_agent(mocker):
     return mocker.patch("app.routers.expense_endpoints.graph")
+
+
+# Report Agent Fixtures
+
+
+@pytest.fixture
+def mock_report_llm(mocker):
+    return mocker.patch("app.agent.report_agent.nodes.analyst_node.llm")
+
+
+@pytest.fixture
+def mock_s3(mocker):
+    return mocker.patch("app.agent.report_agent.nodes.presenter_node.s3")
+
+
+@pytest.fixture
+def mock_report_agent(mocker):
+    return mocker.patch("app.routers.report_endpoints.graph")
+
+
+@pytest.fixture
+def mock_report_input():
+    return ReportCreate(user_id="placeholder", month="2026-05")
+
+
+@pytest.fixture
+def mock_raw_data():
+    return {
+        "total_spent": 164.60,
+        "monthly_budget": 1000,
+        "categories": [
+            {
+                "category": "Food",
+                "spent": 8.0,
+                "budget": 200.0,
+                "variance": -192.0,
+                "variance_pct": 4.0,
+            },
+            {
+                "category": "Transport",
+                "spent": 81.0,
+                "budget": None,
+                "variance": None,
+                "variance_pct": None,
+            },
+        ],
+        "days_in_period": 31,
+        "current_day": 18,
+    }
+
+
+@pytest.fixture
+def mock_full_state(mock_report_input, mock_raw_data):
+    return {
+        "input": mock_report_input,
+        "raw_data": mock_raw_data,
+        "financial_advice": "Find cheaper alternatives for transport",
+        "chart_image_bytes": {"pie": "fakepie", "bar": "fakebar"},
+    }
+
+
+# DB / Client
 
 
 @pytest.fixture
@@ -88,6 +153,7 @@ def broken_write_db_client():
     app.dependency_overrides.clear()
 
 
+# User / Budget / Expense helpers
 @pytest.fixture
 def generate_test_user(client):
     test_user = UserCreate(name="kimmy", email="kimmy@gmail.com", monthly_budget=1000)
