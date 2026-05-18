@@ -164,13 +164,13 @@ class TestGetExpenseWithID:
 
 class TestCreateExpense:
     def test_successful_creation_of_expense(
-        self, client, generate_test_user, mocker, mock_llm
+        self, client, generate_test_user, mocker, mock_expense_llm
     ):
         """
         Tests successful creation of an expense with a registered user, which is indicated by a unique UUID value ('id') that is populated after successful addition of the expense into the database
         """
         test_user_id = generate_test_user["id"]
-        setup_mock(populate_extracted_expense(), mocker, mock_llm)
+        setup_mock(populate_extracted_expense(), mocker, mock_expense_llm)
 
         test_expense = ExpenseCreate(
             description="Coffee for $2 after lunch today", user_id=test_user_id
@@ -196,13 +196,13 @@ class TestCreateExpense:
         assert response.status_code == 404
         assert response.json()["detail"] == "User not found, create a user first!"
 
-    def test_graph_value_error(self, client, generate_test_user, mock_agent):
+    def test_graph_value_error(self, client, generate_test_user, mock_expense_agent):
         """
         Tests that a 400 error is thrown when a ValueError occurs
         """
         test_user_id = generate_test_user["id"]
 
-        mock_agent.invoke.side_effect = ValueError("Invalid input!")
+        mock_expense_agent.invoke.side_effect = ValueError("Invalid input!")
 
         test_expense = ExpenseCreate(
             description="Coffee for $2 after lunch today", user_id=test_user_id
@@ -212,13 +212,13 @@ class TestCreateExpense:
 
         assert response.status_code == 400
 
-    def test_graph_runtime_error(self, client, generate_test_user, mock_agent):
+    def test_graph_runtime_error(self, client, generate_test_user, mock_expense_agent):
         """
         Tests that a 500 error is thrown when a RuntimeError occurs
         """
         test_user_id = generate_test_user["id"]
 
-        mock_agent.invoke.side_effect = RuntimeError("Runtime error occurred!")
+        mock_expense_agent.invoke.side_effect = RuntimeError("Runtime error occurred!")
 
         test_expense = ExpenseCreate(
             description="Coffee for $2 after lunch today", user_id=test_user_id
@@ -228,13 +228,15 @@ class TestCreateExpense:
 
         assert response.status_code == 500
 
-    def test_graph_unexpected_error(self, client, generate_test_user, mock_agent):
+    def test_graph_unexpected_error(
+        self, client, generate_test_user, mock_expense_agent
+    ):
         """
         Tests that a 500 error is thrown when any unexpected error occurs
         """
         test_user_id = generate_test_user["id"]
 
-        mock_agent.invoke.side_effect = Exception("Unexpected error occurred!")
+        mock_expense_agent.invoke.side_effect = Exception("Unexpected error occurred!")
 
         test_expense = ExpenseCreate(
             description="Coffee for $2 after lunch today", user_id=test_user_id
@@ -245,14 +247,14 @@ class TestCreateExpense:
         assert response.status_code == 500
 
     def test_creation_with_flagged_state(
-        self, client, generate_test_user, mock_agent, mocker
+        self, client, generate_test_user, mock_expense_agent, mocker
     ):
         """
         Tests that a 422 error is thrown when 'flagged' is set to True in the state during the course of traversing through the graph
         """
         test_user_id = generate_test_user["id"]
 
-        mock_agent.invoke.return_value = {
+        mock_expense_agent.invoke.return_value = {
             "extracted_info": mocker.MagicMock(),
             "flagged": True,
             "flagged_reason": "Could not extract a valid amount. Please include a valid and proper amount for extraction.",
@@ -271,14 +273,14 @@ class TestCreateExpense:
         )
 
     def test_creation_with_empty_extraction_info(
-        self, client, generate_test_user, mock_agent, mocker
+        self, client, generate_test_user, mock_expense_agent, mocker
     ):
         """
         Tests that a 500 error is thrown when 'extracted_info' is None in the state during the course of traversing through the graph
         """
         test_user_id = generate_test_user["id"]
 
-        mock_agent.invoke.return_value = {"extracted_info": None}
+        mock_expense_agent.invoke.return_value = {"extracted_info": None}
 
         test_expense = ExpenseCreate(
             description="INVALID USER DESCRIPTION", user_id=test_user_id
@@ -288,11 +290,13 @@ class TestCreateExpense:
         assert response.status_code == 500
         assert response.json()["detail"] == "Failed to extract expense information"
 
-    def test_post_with_database_error(self, broken_write_db_client, mocker, mock_agent):
+    def test_post_with_database_error(
+        self, broken_write_db_client, mocker, mock_expense_agent
+    ):
         """
         Tests that a 500 error will be thrown when a database error occurs during this POST request
         """
-        mock_agent.invoke.return_value = {
+        mock_expense_agent.invoke.return_value = {
             "extracted_info": mocker.MagicMock(),
             "flagged": False,
             "flagged_reason": None,

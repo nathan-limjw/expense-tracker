@@ -15,12 +15,12 @@ from tests.test_helpers import populate_extracted_expense, setup_mock
 
 
 @pytest.fixture
-def mock_llm(mocker):
+def mock_expense_llm(mocker):
     return mocker.patch("app.agent.expense_agent.nodes.llm")
 
 
 @pytest.fixture
-def mock_agent(mocker):
+def mock_expense_agent(mocker):
     return mocker.patch("app.routers.expense_endpoints.graph")
 
 
@@ -106,10 +106,10 @@ def generate_test_budget(client, generate_test_user):
 
 
 @pytest.fixture
-def generate_test_expense(client, generate_test_user, mocker, mock_llm):
+def generate_test_expense(client, generate_test_user, mocker, mock_expense_llm):
     test_user_id = generate_test_user["id"]
 
-    setup_mock(populate_extracted_expense(), mocker, mock_llm)
+    setup_mock(populate_extracted_expense(), mocker, mock_expense_llm)
 
     test_expense = ExpenseCreate(
         description="Coffee for $2 after lunch today", user_id=test_user_id
@@ -120,7 +120,7 @@ def generate_test_expense(client, generate_test_user, mocker, mock_llm):
 
 
 @pytest.fixture
-def generate_multiple_expenses(client, generate_test_user, mocker, mock_llm):
+def generate_multiple_expenses(client, generate_test_user, mocker, mock_expense_llm):
     test_user_id = generate_test_user["id"]
     expenses = []
 
@@ -136,7 +136,7 @@ def generate_multiple_expenses(client, generate_test_user, mocker, mock_llm):
         setup_mock(
             populate_extracted_expense(category=category, amount=amount, date=date),
             mocker,
-            mock_llm,
+            mock_expense_llm,
         )
         test_expense = ExpenseCreate(description=description, user_id=test_user_id)
         response = client.post("/expenses/", json=test_expense.model_dump())

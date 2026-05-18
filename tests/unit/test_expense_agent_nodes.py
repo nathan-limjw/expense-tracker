@@ -16,7 +16,7 @@ from utils.config import settings
 
 
 class TestExtractionNode:
-    def test_first_attempt_uses_extraction_prompt(self, mocker, mock_llm):
+    def test_first_attempt_uses_extraction_prompt(self, mocker, mock_expense_llm):
         """
         Tests that during the first attempt, the correct prompt is used: the extraction prompt does not contain the 'flagged_reason' attribute
         """
@@ -25,7 +25,7 @@ class TestExtractionNode:
         mock_structured_llm = mocker.MagicMock()
         mock_structured_llm.invoke.return_value = extracted_output
 
-        mock_llm.with_structured_output.return_value = mock_structured_llm
+        mock_expense_llm.with_structured_output.return_value = mock_structured_llm
 
         extraction_node(populate_expense_agent_state())
 
@@ -34,7 +34,7 @@ class TestExtractionNode:
 
         assert "flagged_reason" not in system_message
 
-    def test_retry_attempt_uses_retry_extraction_prompt(self, mocker, mock_llm):
+    def test_retry_attempt_uses_retry_extraction_prompt(self, mocker, mock_expense_llm):
         """
         Tests that on subsequent attempts, the retry extraction prompt is used: contains the exact value of
         'flagged_reason' inside the prompt
@@ -44,7 +44,7 @@ class TestExtractionNode:
         mock_structured_llm = mocker.MagicMock()
         mock_structured_llm.invoke.return_value = extracted_output
 
-        mock_llm.with_structured_output.return_value = mock_structured_llm
+        mock_expense_llm.with_structured_output.return_value = mock_structured_llm
 
         extraction_node(
             populate_expense_agent_state(
@@ -59,26 +59,26 @@ class TestExtractionNode:
 
         assert "Could not determine a category. Be more specific." in system_message
 
-    def test_incrementation_of_iteration(self, mocker, mock_llm):
+    def test_incrementation_of_iteration(self, mocker, mock_expense_llm):
         """
         Checks if the 'iterations' attribute in the state is incremented by 1 after completion of extraction
 
         """
         extracted_output = populate_extracted_expense()
 
-        setup_mock(extracted_output, mocker, mock_llm)
+        setup_mock(extracted_output, mocker, mock_expense_llm)
 
         result = extraction_node(populate_expense_agent_state())
 
         assert result["iterations"] == 1
 
-    def test_retry_resets_flagged_attributes(self, mocker, mock_llm):
+    def test_retry_resets_flagged_attributes(self, mocker, mock_expense_llm):
         """
         Checks that on retry attempts, the 'flagged' attribute is reset to False (originally True) and 'flagged_reason' is set to None (originally containing a string)
         """
         extracted_output = populate_extracted_expense()
 
-        setup_mock(extracted_output, mocker, mock_llm)
+        setup_mock(extracted_output, mocker, mock_expense_llm)
 
         result = extraction_node(
             populate_expense_agent_state(

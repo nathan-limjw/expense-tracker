@@ -9,13 +9,15 @@ graph = create_expense_agent_graph()
 
 
 class TestExpenseAgent:
-    def test_successful_extraction_has_no_flag_attributes(self, mocker, mock_llm):
+    def test_successful_extraction_has_no_flag_attributes(
+        self, mocker, mock_expense_llm
+    ):
         """
         Tests successful execution of the expense agent graph as indicated by
         no flags and no flagged_reason in the final output state
         """
         input_state = populate_expense_agent_state()
-        setup_mock(populate_extracted_expense(), mocker, mock_llm)
+        setup_mock(populate_extracted_expense(), mocker, mock_expense_llm)
 
         response = graph.invoke(input_state)
 
@@ -23,7 +25,7 @@ class TestExpenseAgent:
         assert response["flagged_reason"] is None
 
     def test_successful_extraction_next_attempt_resets_flag_attributes(
-        self, mocker, mock_llm
+        self, mocker, mock_expense_llm
     ):
         """
         Tests that given an unsuccessful attempt of extraction, subsequent successful attempt will reset flag attributes to False ('flagged') and None ('flagged_reason')
@@ -34,7 +36,7 @@ class TestExpenseAgent:
             populate_extracted_expense(amount=-2),
             populate_extracted_expense(),
         ]
-        mock_llm.with_structured_output.return_value = mock_structured_llm
+        mock_expense_llm.with_structured_output.return_value = mock_structured_llm
 
         response = graph.invoke(input_state)
 
@@ -42,7 +44,7 @@ class TestExpenseAgent:
         assert not response["flagged"]
         assert response["flagged_reason"] is None
 
-    def test_maximum_attempts_is_three(self, mocker, mock_llm):
+    def test_maximum_attempts_is_three(self, mocker, mock_expense_llm):
         """
         Tests that an invalid description in the input goes through a maximum of 3 runs, resulting in the response having
         'flagged' as True alongside a "flagged_reason"
@@ -55,7 +57,7 @@ class TestExpenseAgent:
                 extracted_description="Coffee for -$2", amount=-2.00
             ),
             mocker,
-            mock_llm,
+            mock_expense_llm,
         )
 
         response = graph.invoke(input_state)
