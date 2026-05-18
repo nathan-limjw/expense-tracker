@@ -31,9 +31,22 @@ def visualiser_node(state: ReportAgentState):
 
 def _generate_pie(labels: list[str], spent: list[float]):
     fig, ax = plt.subplots(figsize=(7, 7))
-    wedges, texts, autotexts = ax.pie(
-        spent, labels=labels, autopct="%1.1f%%", startangle=140, pctdistance=0.85
-    )
+
+    if not spent:
+        ax.text(
+            0.5,
+            0.5,
+            "No expenses this month",
+            ha="center",
+            va="center",
+            fontsize=12,
+            transform=ax.transAxes,
+        )
+    else:
+        wedges, texts, autotexts = ax.pie(
+            spent, labels=labels, autopct="%1.1f%%", startangle=140, pctdistance=0.85
+        )
+
     ax.set_title("Spending by Category", fontsize=14, fontweight="bold", pad=20)
 
     buf = io.BytesIO()
