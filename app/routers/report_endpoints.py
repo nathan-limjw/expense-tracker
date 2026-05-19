@@ -41,4 +41,4 @@ def get_report(input: ReportCreate, db: Session = Depends(get_db)):
         logger.exception("Unexpected error during graph execution!")
         raise HTTPException(status_code=500, detail="Failed to generate report")
 
-    return response["final_report"]
+    return response
