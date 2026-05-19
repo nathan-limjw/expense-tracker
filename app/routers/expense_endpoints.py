@@ -175,10 +175,10 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
                 messages.append(
                     f"You have spent {(total_spending_by_month * 80 / user.monthly_budget):.2f}% of your monthly budget!"
                 )
-            else:
-                messages.append(
-                    f"You have spent ${total_spending_by_month:.2f} out of your total monthly budget of ${user.monthly_budget:.2f}!"
-                )
+
+            messages.append(
+                f"You have spent ${total_spending_by_month:.2f} out of your total monthly budget of ${user.monthly_budget:.2f}!"
+            )
 
         monthly_budget_for_category = (
             db.query(Budget)
@@ -212,10 +212,10 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
                 messages.append(
                     f"You have spent {(total_spending_by_category_by_month * 80 / monthly_budget_for_category.limit):.2f}% of your monthly budget for category: {new_expense.category}!"
                 )
-            else:
-                messages.append(
-                    f"You have spent ${total_spending_by_category_by_month:.2f} out of your monthly budget for {new_expense.category} of ${monthly_budget_for_category.limit:.2f}!"
-                )
+
+            messages.append(
+                f"You have spent ${total_spending_by_category_by_month:.2f} out of your monthly budget for {new_expense.category} of ${monthly_budget_for_category.limit:.2f}!"
+            )
 
         return ExpenseCreateResponse(expense=new_expense, messages=messages)
 
