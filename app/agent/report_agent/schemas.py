@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import Annotated, TypedDict
 
 from app.schemas.report_schema import ReportCreate
 
@@ -19,9 +19,17 @@ class RawData(TypedDict):
     current_day: int
 
 
+def merge_dict(existing: dict, new: dict) -> dict:
+    if not existing:
+        return new or {}
+    if not new:
+        return existing or {}
+    return {**existing, **new}
+
+
 class ReportAgentState(TypedDict):
     input: ReportCreate
     raw_data: RawData
     financial_advice: str
     chart_image_bytes: dict
-    final_report: dict
+    final_report: Annotated[dict, merge_dict]
