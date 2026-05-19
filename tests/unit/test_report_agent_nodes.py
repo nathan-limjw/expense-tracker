@@ -2,50 +2,16 @@ from datetime import date
 
 import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
-from sqlalchemy import StaticPool, create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.agent.report_agent.nodes.accountant_node import accountant_node
 from app.agent.report_agent.nodes.analyst_node import _build_human_message, analyst_node
 from app.agent.report_agent.nodes.presenter_node import presenter_node
 from app.agent.report_agent.nodes.visualiser_node import visualiser_node
 from app.agent.report_agent.prompts import ANALYST_SYSTEM_PROMPT
-from app.db.database import Base
 from app.models.budget import Budget
 from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.report_schema import ReportCreate
-
-
-@pytest.fixture
-def db_session():
-    # the client fixture session is internal to the app, so there is no way to directly augment the db from a UNIT test. a standalone db_session fixture is created that does the same thing but gives direct access
-
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def test_user(db_session):
-    user = User(name="kimmy", email="kimmy@gmail.com", monthly_budget=1000.0)
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
-
-
-@pytest.fixture
-def report_input(test_user):
-    return ReportCreate(user_id=test_user.id, month="2026-05")
 
 
 class TestAccountantNode:
