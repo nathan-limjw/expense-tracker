@@ -1,0 +1,5 @@
+python-telegram-bot
+httpx
+sqlalchemy
+psycopg2-binary
+pydantic-settings
