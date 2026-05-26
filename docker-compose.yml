@@ -8,3 +8,17 @@ services:
       - .env
     volumes:
       - ./app/db:/app/app/db
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    container_name: expense_bot
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - /etc/nginx/ssl/bot.crt:/etc/nginx/ssl/bot.crt:ro
+    depends_on:
+      - app
