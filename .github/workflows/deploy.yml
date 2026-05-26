@@ -39,6 +39,14 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
+          docker build --build-arg APP_ENV=prod \
+            -f bot/Dockerfile \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:bot-$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:bot-$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:bot-$IMAGE_TAG \
+            $ECR_REGISTRY/$ECR_REPOSITORY:bot-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:bot-latest
+
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v1
         with:
@@ -52,10 +60,15 @@ jobs:
 
             # Pull latest image
             docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
+            docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:bot-latest
 
             # Stop and remove old container if running
             docker stop expense-tracker || true
             docker rm expense-tracker || true
+
+            # Stop and remove old bot container
+            docker stop expense-bot || true
+            docker rm expense-bot || true
 
             # Run new container
             docker run -d \
@@ -71,3 +84,16 @@ jobs:
               -e LOG_LEVEL=${{ secrets.LOG_LEVEL }} \
               -e S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }} \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
+            
+            # Run bot container
+            docker run -d \
+              --name expense-bot \
+              --restart unless-stopped \
+              -p 8001:8001 \
+              -e APP_ENV=prod \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
+              -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
+              -e API_BASE_URL=${{ secrets.API_BASE_URL }} \
+              -v /etc/nginx/ssl/bot.crt:/etc/nginx/ssl/bot.crt:ro \
+              ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:bot-latest
