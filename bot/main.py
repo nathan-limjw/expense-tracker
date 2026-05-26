@@ -18,7 +18,3 @@ def main():
         cert="/etc/nginx/ssl/bot.crt",
         key="/etc/nginx/ssl/bot.key",
     )
-
-
-if __name__ == "__main__":
-    main()
