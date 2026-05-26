@@ -15,7 +15,6 @@ def main():
         listen="0.0.0.0",
         port=8001,
         webhook_url=settings.WEBHOOK_URL,
-        certificate=open("/etc/nginx/ssl/bot.crt", "rb"),
     )
 
 
