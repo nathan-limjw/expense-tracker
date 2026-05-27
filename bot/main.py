@@ -14,8 +14,10 @@ async def post_init(application):
 
 def main():
     app = ApplicationBuilder().token(settings.BOT_TOKEN).post_init(post_init).build()
+
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+
     print("Bot starting...")
     app.run_webhook(
         listen="0.0.0.0",
