@@ -4,7 +4,7 @@ An AI-powered expense tracker with a Telegram bot frontend. Log expenses in plai
 
 ---
 
-## What I Built & Why
+## Introduction
 
 Most expense trackers make you fill in structured fields. I wanted to explore whether an LLM agent could handle that extraction reliably — and what it takes to make that production-ready.
 
@@ -33,18 +33,21 @@ This project is a full-stack application with a LangGraph-powered extraction pip
 
 ## Architecture
 
-```
-User (Telegram)
-      ↓
-Telegram Servers
-      ↓  HTTPS webhook
-nginx (SSL termination)
-      ↓  HTTP
-Telegram Bot Service (FastAPI + PTB) ←→ Expense Tracker API (FastAPI)
-                                                    ↓
-                                              LangGraph Agent
-                                                    ↓
-                                          PostgreSQL on RDS
+```mermaid
+flowchart TD
+    A[User] -->|sends message| B[Telegram Servers]
+    B -->|POST HTTPS :443| C["Nginx<br>SSL Termination"]
+    C -->|POST HTTP :8001| D["Bot Container<br>FastAPI + PTB"]
+    D -->|http://expense-tracker:8000| E["App Container<br>FastAPI"]
+    E --> F[LangGraph Agent]
+    F --> G[("PostgreSQL<br>RDS")]
+    F -->|charts| H[(AWS S3)]
+
+    subgraph ec2 ["EC2 — expense-network"]
+        D
+        E
+        F
+    end
 ```
 
 Both services run as separate Docker containers on a shared named network, deployed on a single EC2 instance.
@@ -55,13 +58,16 @@ Both services run as separate Docker containers on a shared named network, deplo
 
 ### Expense Agent
 
-Processes natural language expense input through a self-correcting state machine:
+Processes natural language expense input through a self-correcting state machine with a maximum of 3 attempts:
 
-```
-START → extraction → validation → decision
-                          ↑            |
-                          └─ retry ────┘ (max 3 attempts)
-                                        └→ END
+```mermaid
+flowchart LR
+    S([START]) --> EX[extraction]
+    EX --> VA[validation]
+    VA --> DE{decision}
+    DE -->|success| EN([END])
+    DE -->|failed & attempts < 3| EX
+    DE -->|attempts >= 3| EN
 ```
 
 1. **Extraction** — LLM pulls out amount, category, date, description, and a confidence score
@@ -70,11 +76,16 @@ START → extraction → validation → decision
 
 ### Report Agent
 
-Generates monthly financial reports through a four-node pipeline with parallel execution:
+Generates monthly financial reports through a four-node pipeline. The analyst and visualiser nodes run in parallel after the accountant completes:
 
-```
-START → accountant → analyst   ↘
-              └────→ visualiser → presenter → END
+```mermaid
+flowchart LR
+    S([START]) --> AC[accountant]
+    AC --> AN[analyst]
+    AC --> VI[visualiser]
+    AN --> PR[presenter]
+    VI --> PR
+    PR --> EN([END])
 ```
 
 1. **Accountant** — queries RDS for spending data, computes category breakdowns and budget variances
@@ -103,7 +114,9 @@ START → accountant → analyst   ↘
 | `/start` | Register and get started |
 | `/history` | View your last 10 expenses |
 | `/report` | Generate your monthly financial report |
-| `/setbudget <category> <amount> <month>` | Set a category budget e.g. `/setbudget Food 200 2026-05` |
+| `/setcategorybudget <category> <amount> <month>` | Set a category budget e.g. `/setcategorybudget Food 200 2026-05` |
+| `/updatecategorybudget <category> <amount> <month>` | Update an existing category budget |
+| `/setmonthlybudget <amount>` | Set your overall monthly budget e.g. `/setmonthlybudget 1000` |
 | `/help` | Show all commands |
 
 ---
@@ -118,28 +131,36 @@ START → accountant → analyst   ↘
 │   │   │   ├── nodes.py        # Extraction, validation, decision nodes
 │   │   │   ├── prompts.py      # LLM prompts
 │   │   │   └── schemas.py      # Agent state + extracted expense schemas
+│   │   │
 │   │   └── report_agent/
 │   │       ├── graph.py        # LangGraph state machine
 │   │       ├── nodes/          # Accountant, analyst, visualiser, presenter
 │   │       ├── prompts.py      # LLM prompts
 │   │       └── schemas.py      # Report agent state schemas
+│   │
 │   ├── db/
 │   │   └── database.py         # SQLAlchemy engine + session setup
+│   │
 │   ├── models/                 # SQLAlchemy ORM models (User, Expense, Budget)
 │   ├── routers/                # FastAPI route handlers
 │   ├── schemas/                # Pydantic request/response schemas
-│   └── main.py
+│   ├── main.py 
+│   └── requirements.txt
+│
 ├── bot/
 │   ├── main.py                 # FastAPI + PTB webhook server
 │   ├── handlers.py             # Command and message handlers
 │   ├── user_service.py         # Telegram user registration + mapping
 │   ├── config.py               # Bot settings
-│   ├── requirements.txt
-│   └── Dockerfile
+│   └── requirements.txt
+│
+├── Dockerfile_app              # App image
+├── Dockerfile_bot              # Bot image
 ├── utils/
 │   ├── config.py               # Pydantic settings + env config
 │   ├── db_helpers.py           # Dialect-aware SQL helpers
 │   └── logger.py
+│
 └── tests/
     ├── unit/                   # Node-level unit tests
     ├── agent/                  # End-to-end graph traversal tests
@@ -208,10 +229,8 @@ Deployments only happen when all tests pass.
 
 ## Infrastructure
 
-- **EC2** — single instance running both containers on a shared Docker network
+- **EC2** — single instance running both containers on a shared Docker named network
 - **RDS** — PostgreSQL database, not publicly accessible, only reachable from EC2
 - **ECR** — private Docker image registry for both app and bot images
 - **S3** — stores generated report charts (pie and bar) per user per month
 - **nginx** — reverse proxy handling SSL termination for the Telegram webhook
-
----
