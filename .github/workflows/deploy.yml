@@ -58,22 +58,24 @@ jobs:
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
               docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
-            # Pull latest image
+            # Pull latest images
             docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
             docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:bot-latest
 
-            # Stop and remove old container if running
+            # Create shared network if it doesn't exist
+            docker network create expense-network || true
+
+            # Stop and remove old containers
             docker stop expense-tracker || true
             docker rm expense-tracker || true
-
-            # Stop and remove old bot container
             docker stop expense-bot || true
             docker rm expense-bot || true
 
-            # Run new container
+            # Run app container
             docker run -d \
               --name expense-tracker \
               --restart unless-stopped \
+              --network expense-network \
               -p 8000:8000 \
               -e APP_ENV=prod \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
@@ -84,16 +86,17 @@ jobs:
               -e LOG_LEVEL=${{ secrets.LOG_LEVEL }} \
               -e S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }} \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
-            
+
             # Run bot container
             docker run -d \
               --name expense-bot \
               --restart unless-stopped \
+              --network expense-network \
               -p 8001:8001 \
               -e APP_ENV=prod \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
               -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
-              -e API_BASE_URL=${{ secrets.API_BASE_URL }} \
+              -e API_BASE_URL=http://expense-tracker:8000 \
               -v /etc/nginx/ssl/bot.crt:/etc/nginx/ssl/bot.crt:ro \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:bot-latest
