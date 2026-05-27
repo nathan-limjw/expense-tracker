@@ -23,6 +23,10 @@ def main():
         listen="0.0.0.0",
         port=8001,
         webhook_url=settings.WEBHOOK_URL,
-        cert="/etc/nginx/ssl/bot.crt",
-        key="/etc/nginx/ssl/bot.key",
+        cert=None,
+        key=None,
     )
+
+
+if __name__ == "__main__":
+    main()
