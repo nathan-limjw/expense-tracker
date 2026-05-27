@@ -18,7 +18,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"*Commands:*\n"
         f"/history — view your last 10 expenses\n"
         f"/report — generate your monthly financial report\n"
-        f"/setbudget — set a category budget e.g. `/setbudget Food 200 2026-05`\n"
+        f"/setcategorybudget — set a category budget e.g. `/setcategorybudget Food 200 2026-05`\n"
+        f"/setmonthlybudget — set your monthly budget e.g. `/setmonthlybudget 1000`\n"
+        f"/updatecategorybudget <category> <amount> <month> — update an existing category budget\n"
         f"/help — show this message again",
         parse_mode="Markdown",
     )
@@ -29,7 +31,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Commands:*\n"
         "/history — view your last 10 expenses\n"
         "/report — generate your monthly financial report\n"
-        "/setbudget — set a category budget e.g. `/setbudget Food 200 2026-05`\n"
+        "/setcategorybudget — set a category budget e.g. `/setcategorybudget Food 200 2026-05`\n"
+        "/setmonthlybudget — set your monthly budget e.g. `/setmonthlybudget 1000`\n"
+        "/updatecategorybudget <category> <amount> <month> — update an existing category budget\n"
         "/help — show this message again\n\n"
         "Or just send any expense in plain text to log it!",
         parse_mode="Markdown",
@@ -118,7 +122,7 @@ async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(reply, parse_mode="Markdown")
 
 
-async def setbudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def setcategorybudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_user_id = str(update.effective_user.id)
     name = update.effective_user.first_name
     user_id = await get_or_register_user(telegram_user_id, name)
@@ -126,8 +130,8 @@ async def setbudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if not args or len(args) != 3:
         await update.message.reply_text(
-            "Usage: `/setbudget <category> <amount> <month>`\n"
-            "Example: `/setbudget Food 200 2026-05`\n\n"
+            "Usage: `/setcategorybudget <category> <amount> <month>`\n"
+            "Example: `/setcategorybudget Food 200 2026-05`\n\n"
             "Valid categories: Food, Transport, Shopping, Utilities, Entertainment, Others",
             parse_mode="Markdown",
         )
@@ -139,7 +143,7 @@ async def setbudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = float(amount)
     except ValueError:
         await update.message.reply_text(
-            "❌ Amount must be a number e.g. `/setbudget Food 200 2026-05`",
+            "❌ Amount must be a number e.g. `/setcategorybudget Food 200 2026-05`",
             parse_mode="Markdown",
         )
         return
@@ -162,7 +166,97 @@ async def setbudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     elif response.status_code == 409:
         await update.message.reply_text(
-            f"⚠️ Budget for {category} already exists for {month}. Use `/updatebudget` to change it.",
+            f"⚠️ Budget for {category} already exists for {month}. Use `/updatecategorybudget` to change it.",
+            parse_mode="Markdown",
+        )
+    elif response.status_code == 422:
+        await update.message.reply_text(
+            f"❌ Invalid input: {response.json()['detail']}",
+            parse_mode="Markdown",
+        )
+    else:
+        await update.message.reply_text("❌ Something went wrong, please try again.")
+
+
+async def setmonthlybudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_user_id = str(update.effective_user.id)
+    name = update.effective_user.first_name
+    user_id = await get_or_register_user(telegram_user_id, name)
+
+    args = context.args
+    if not args or len(args) != 1:
+        await update.message.reply_text(
+            "Usage: `/setmonthlybudget <amount>`\nExample: `/setmonthlybudget 1000`",
+            parse_mode="Markdown",
+        )
+        return
+
+    try:
+        amount = float(args[0])
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Amount must be a number e.g. `/setmonthlybudget 1000`",
+            parse_mode="Markdown",
+        )
+        return
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.put(
+            f"{settings.API_BASE_URL}/users/{user_id}",
+            json={"monthly_budget": amount},
+        )
+
+    if response.status_code == 200:
+        await update.message.reply_text(
+            f"✅ Monthly budget updated to *${amount:.2f}*",
+            parse_mode="Markdown",
+        )
+    else:
+        await update.message.reply_text("❌ Something went wrong, please try again.")
+
+
+async def updatecategorybudget_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    telegram_user_id = str(update.effective_user.id)
+    name = update.effective_user.first_name
+    user_id = await get_or_register_user(telegram_user_id, name)
+
+    args = context.args
+    if not args or len(args) != 3:
+        await update.message.reply_text(
+            "Usage: `/updatecategorybudget <category> <amount> <month>`\n"
+            "Example: `/updatecategorybudget Food 300 2026-05`\n\n"
+            "Valid categories: Food, Transport, Shopping, Utilities, Entertainment, Others",
+            parse_mode="Markdown",
+        )
+        return
+
+    category, amount, month = args
+
+    try:
+        amount = float(amount)
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Amount must be a number e.g. `/updatecategorybudget Food 300 2026-05`",
+            parse_mode="Markdown",
+        )
+        return
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.put(
+            f"{settings.API_BASE_URL}/budgets/{user_id}",
+            json={"category": category, "month": month, "limit": amount},
+        )
+
+    if response.status_code == 200:
+        await update.message.reply_text(
+            f"✅ Budget updated: *{category}* — ${amount:.2f} for {month}",
+            parse_mode="Markdown",
+        )
+    elif response.status_code == 404:
+        await update.message.reply_text(
+            f"❌ No budget found for {category} in {month}. Use `/setbudget` to create one first.",
             parse_mode="Markdown",
         )
     elif response.status_code == 422:

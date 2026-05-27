@@ -11,8 +11,10 @@ from bot.handlers import (
     history_handler,
     message_handler,
     report_handler,
-    setbudget_handler,
+    setcategorybudget_handler,
+    setmonthlybudget_handler,
     start_handler,
+    updatecategorybudget_handler,
 )
 
 
@@ -22,7 +24,15 @@ def create_app():
     application.add_handler(CommandHandler("help", help_handler))
     application.add_handler(CommandHandler("history", history_handler))
     application.add_handler(CommandHandler("report", report_handler))
-    application.add_handler(CommandHandler("setbudget", setbudget_handler))
+    application.add_handler(
+        CommandHandler("setcategorybudget", setcategorybudget_handler)
+    )
+    application.add_handler(
+        CommandHandler("setmonthlybudget", setmonthlybudget_handler)
+    )
+    application.add_handler(
+        CommandHandler("updatecategorybudget", updatecategorybudget_handler)
+    )
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
     )
