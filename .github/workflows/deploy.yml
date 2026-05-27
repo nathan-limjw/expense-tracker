@@ -100,3 +100,6 @@ jobs:
               -e API_BASE_URL=http://expense-tracker:8000 \
               -v /etc/nginx/ssl/bot.crt:/etc/nginx/ssl/bot.crt:ro \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:bot-latest
+            
+            # Clean up old images to prevent disk space issues
+            docker image prune -af
