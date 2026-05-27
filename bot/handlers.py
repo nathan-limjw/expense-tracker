@@ -1,6 +1,8 @@
+import httpx
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from bot.config import settings
 from bot.user_service import get_or_register_user
 
 
@@ -25,7 +27,30 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = await get_or_register_user(telegram_user_id, name)
 
-    await update.message.reply_text(
-        f"Got it! Your user_id is `{user_id}`\n\nYou said: {text}",
-        parse_mode="Markdown",
-    )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            f"{settings.API_BASE_URL}/expenses/",
+            json={"description": text, "user_id": user_id},
+        )
+
+    if response.status_code == 200:
+        data = response.json()
+        expense = data["expense"]
+        messages = data["messages"]
+
+        reply = (
+            f"✅ Logged!\n\n"
+            f"*{expense['description']}*\n"
+            f"💰 ${expense['amount']:.2f} — {expense['category']}\n"
+            f"📅 {expense['date'][:10]}\n"
+        )
+
+        if messages:
+            reply += "\n" + "\n".join(f"⚠️ {m}" for m in messages)
+
+    elif response.status_code == 422:
+        reply = f"❌ Couldn't log that: {response.json()['detail']}"
+    else:
+        reply = "❌ Something went wrong, please try again."
+
+    await update.message.reply_text(reply, parse_mode="Markdown")
