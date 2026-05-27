@@ -6,12 +6,23 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from bot.config import settings
-from bot.handlers import message_handler, start_handler
+from bot.handlers import (
+    help_handler,
+    history_handler,
+    message_handler,
+    report_handler,
+    setbudget_handler,
+    start_handler,
+)
 
 
 def create_app():
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start_handler))
+    application.add_handler(CommandHandler("help", help_handler))
+    application.add_handler(CommandHandler("history", history_handler))
+    application.add_handler(CommandHandler("report", report_handler))
+    application.add_handler(CommandHandler("setbudget", setbudget_handler))
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
     )
