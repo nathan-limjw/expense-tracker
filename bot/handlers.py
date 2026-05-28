@@ -56,6 +56,38 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_user_id = str(update.effective_user.id)
+    name = update.effective_user.first_name
+    user_id = await get_or_register_user(telegram_user_id, name)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.get(
+            f"{settings.API_BASE_URL}/expenses/",
+            params={"user_id": user_id},
+        )
+
+    if response.status_code == 404:
+        await update.message.reply_text("No expenses logged yet!")
+        return
+
+    if response.status_code != 200:
+        await update.message.reply_text("❌ Something went wrong, please try again.")
+        return
+
+    expenses = response.json()[-10:]
+    lines = []
+    for e in reversed(expenses):
+        lines.append(
+            f"• *{e['description']}* — ${e['amount']:.2f} ({e['category']}) {e['date'][:10]}"
+        )
+
+    await update.message.reply_text(
+        "*Your last 10 expenses:*\n\n" + "\n".join(lines),
+        parse_mode="Markdown",
+    )
+
+
 async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_user_id = str(update.effective_user.id)
     name = update.effective_user.first_name
