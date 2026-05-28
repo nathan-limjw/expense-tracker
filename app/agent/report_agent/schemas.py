@@ -31,5 +31,5 @@ class ReportAgentState(TypedDict):
     input: ReportCreate
     raw_data: RawData
     financial_advice: str
-    chart_image_bytes: dict
+    chart_image_bytes: Annotated[dict, merge_dict]
     final_report: Annotated[dict, merge_dict]
