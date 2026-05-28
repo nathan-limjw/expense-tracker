@@ -97,7 +97,7 @@ async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⏳ Generating your report, this may take a few seconds..."
     )
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=150.0) as client:
         response = await client.post(
             f"{settings.API_BASE_URL}/report/",
             json={"user_id": user_id, "month": ""},
