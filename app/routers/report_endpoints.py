@@ -32,11 +32,13 @@ def get_report(input: ReportCreate, db: Session = Depends(get_db)):
 
     try:
         logger.info("Invoking report agent...")
-        callbacks = get_langfuse_callbacks(
+        callbacks, lf_config = get_langfuse_callbacks(
             "report_generation", input.user_id, {"month": input.month}
         )
+
         response = graph.invoke(
-            input_state, config={"configurable": {"db": db}, "callbacks": callbacks}
+            input_state,
+            config={"configurable": {"db": db}, "callbacks": callbacks, **lf_config},
         )
 
     except ValueError as e:

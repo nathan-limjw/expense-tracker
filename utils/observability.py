@@ -9,10 +9,21 @@ logger = get_logger(__name__)
 def get_langfuse_callbacks(trace_name: str, user_id: str, metadata: dict = {}):
     if not settings.LANGFUSE_PUBLIC_KEY:
         logger.warning("LANGFUSE_PUBLIC_KEY not set, skipping tracing...")
-        return []
+        return [], {}
     try:
         logger.info(f"Langfuse initialised for trace: {trace_name}")
-        return [CallbackHandler(user_id=str(user_id))]
+        handler = CallbackHandler()
+
+        langfuse_config = {
+            "metadata": {
+                "langfuse_trace_name": trace_name,
+                "user_id": str(user_id),
+                **{f"langfuse_meta_{key}": value for key, value in metadata.items()},
+            }
+        }
+
+        return [handler], langfuse_config
+
     except Exception as e:
         logger.warning(f"Langfuse init failed, skipping: {e}")
-        return []
+        return [], {}

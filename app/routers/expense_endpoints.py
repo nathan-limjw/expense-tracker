@@ -119,12 +119,15 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 
     try:
         logger.info("Invoking expense extraction agent...")
-        callbacks = get_langfuse_callbacks(
+        callbacks, lf_config = get_langfuse_callbacks(
             "expense_extraction",
             expense.user_id,
             {"input_length": len(expense.description)},
         )
-        response = graph.invoke(input_state, config={"callbacks": callbacks})
+
+        response = graph.invoke(
+            input_state, config={"callbacks": callbacks, **lf_config}
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
