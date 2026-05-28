@@ -1,4 +1,20 @@
+import io
+
 import httpx
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    HRFlowable,
+    Image,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -17,7 +33,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Just send me any expense in plain text and I'll log it for you.\n\n"
         f"*Commands:*\n"
         f"/history — view your last 10 expenses\n"
-        f"/report — generate your monthly financial report\n"
+        f"/report — generate your monthly financial report with an AI summary and charts\n"
         f"/setcategorybudget — set a category budget e.g. `/setcategorybudget Food 200 2026-05`\n"
         f"/setmonthlybudget — set your monthly budget e.g. `/setmonthlybudget 1000`\n"
         f"/updatecategorybudget <category> <amount> <month> — update an existing category budget\n"
@@ -36,38 +52,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/updatecategorybudget <category> <amount> <month> — update an existing category budget\n"
         "/help — show this message again\n\n"
         "Or just send any expense in plain text to log it!",
-        parse_mode="Markdown",
-    )
-
-
-async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    telegram_user_id = str(update.effective_user.id)
-    name = update.effective_user.first_name
-    user_id = await get_or_register_user(telegram_user_id, name)
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(
-            f"{settings.API_BASE_URL}/expenses/",
-            params={"user_id": user_id},
-        )
-
-    if response.status_code == 404:
-        await update.message.reply_text("No expenses logged yet!")
-        return
-
-    if response.status_code != 200:
-        await update.message.reply_text("❌ Something went wrong, please try again.")
-        return
-
-    expenses = response.json()[-10:]
-    lines = []
-    for e in reversed(expenses):
-        lines.append(
-            f"• *{e['description']}* — ${e['amount']:.2f} ({e['category']}) {e['date'][:10]}"
-        )
-
-    await update.message.reply_text(
-        "*Your last 10 expenses:*\n\n" + "\n".join(lines),
         parse_mode="Markdown",
     )
 
@@ -94,32 +78,154 @@ async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     data = response.json()
+    pdf_bytes = _generate_pdf(data, name)
 
-    category_lines = []
-    for c in data["categories"]:
-        if c["budget"]:
-            category_lines.append(
-                f"• *{c['category']}*: ${c['spent']:.2f} / ${c['budget']:.2f} ({c['variance_pct']:.1f}%)"
-            )
-        else:
-            category_lines.append(
-                f"• *{c['category']}*: ${c['spent']:.2f} (no budget set)"
-            )
+    await update.message.reply_document(
+        document=io.BytesIO(pdf_bytes),
+        filename=f"report_{data['month']}.pdf",
+        caption=f"📊 Your financial report for {data['month']}",
+    )
 
+
+def _generate_pdf(data: dict, name: str) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2 * cm,
+        leftMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "Title",
+        parent=styles["Title"],
+        fontSize=20,
+        spaceAfter=6,
+        textColor=colors.HexColor("#1a1a2e"),
+    )
+    heading_style = ParagraphStyle(
+        "Heading",
+        parent=styles["Heading2"],
+        fontSize=13,
+        spaceBefore=14,
+        spaceAfter=4,
+        textColor=colors.HexColor("#16213e"),
+    )
+    body_style = ParagraphStyle(
+        "Body", parent=styles["Normal"], fontSize=10, spaceAfter=4, leading=14
+    )
+    caption_style = ParagraphStyle(
+        "Caption",
+        parent=styles["Normal"],
+        fontSize=9,
+        textColor=colors.grey,
+        alignment=TA_CENTER,
+    )
+
+    elements = []
+
+    # Title
+    elements.append(Paragraph(f"💸 Expense Report — {data['month']}", title_style))
+    elements.append(
+        Paragraph(
+            f"Generated for {name} | Day {data['current_day']} of {data['days_in_period']}",
+            caption_style,
+        )
+    )
+    elements.append(
+        HRFlowable(
+            width="100%", thickness=0.5, color=colors.HexColor("#cccccc"), spaceAfter=12
+        )
+    )
+
+    # Overview
+    elements.append(Paragraph("Overview", heading_style))
     budget_line = (
-        f"${data['total_spent']:.2f} / ${data['monthly_budget']:.2f}"
+        f"<b>Total Spent:</b> ${data['total_spent']:.2f} / ${data['monthly_budget']:.2f}"
         if data["monthly_budget"]
-        else f"${data['total_spent']:.2f} (no overall budget set)"
+        else f"<b>Total Spent:</b> ${data['total_spent']:.2f} (no overall budget set)"
     )
+    elements.append(Paragraph(budget_line, body_style))
+    elements.append(Spacer(1, 8))
 
-    reply = (
-        f"📊 *Report for {data['month']}* (Day {data['current_day']}/{data['days_in_period']})\n\n"
-        f"*Total Spent:* {budget_line}\n\n"
-        f"*By Category:*\n" + "\n".join(category_lines) + "\n\n"
-        f"*Summary:*\n{data['summary']}"
+    # Category breakdown table
+    elements.append(Paragraph("Spending by Category", heading_style))
+    table_data = [["Category", "Spent", "Budget", "% Used"]]
+    for c in data["categories"]:
+        table_data.append(
+            [
+                c["category"],
+                f"${c['spent']:.2f}",
+                f"${c['budget']:.2f}" if c["budget"] else "—",
+                f"{c['variance_pct']:.1f}%" if c["variance_pct"] else "—",
+            ]
+        )
+
+    table = Table(table_data, colWidths=[5 * cm, 3 * cm, 3 * cm, 3 * cm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16213e")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor("#f5f5f5")],
+                ),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#dddddd")),
+                ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
     )
+    elements.append(table)
+    elements.append(Spacer(1, 12))
 
-    await update.message.reply_text(reply, parse_mode="Markdown")
+    # Charts
+    if data.get("chart_bytes"):
+        elements.append(Paragraph("Charts", heading_style))
+
+        pie_bytes = data["chart_bytes"]["pie"]
+        if isinstance(pie_bytes, list):
+            pie_bytes = bytes(pie_bytes)
+        pie_img = Image(io.BytesIO(pie_bytes), width=10 * cm, height=10 * cm)
+        elements.append(pie_img)
+        elements.append(Paragraph("Spending by Category", caption_style))
+        elements.append(Spacer(1, 8))
+
+        bar_bytes = data["chart_bytes"]["bar"]
+        if isinstance(bar_bytes, list):
+            bar_bytes = bytes(bar_bytes)
+        bar_img = Image(io.BytesIO(bar_bytes), width=14 * cm, height=8 * cm)
+        elements.append(bar_img)
+        elements.append(Paragraph("Spent vs Budget by Category", caption_style))
+        elements.append(Spacer(1, 12))
+
+    # AI Summary
+    elements.append(
+        HRFlowable(
+            width="100%",
+            thickness=0.5,
+            color=colors.HexColor("#cccccc"),
+            spaceBefore=8,
+            spaceAfter=8,
+        )
+    )
+    elements.append(Paragraph("Financial Summary", heading_style))
+    for line in data["summary"].split("\n"):
+        if line.strip():
+            elements.append(Paragraph(line.strip(), body_style))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.read()
 
 
 async def setcategorybudget_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

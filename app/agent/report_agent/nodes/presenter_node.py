@@ -40,6 +40,10 @@ def presenter_node(state: ReportAgentState):
         "categories": raw_data["categories"],
         "summary": state["financial_advice"],
         "charts": {"pie": pie_url, "bar": bar_url},
+        "chart_bytes": {
+            "pie": state["chart_image_bytes"]["pie"],
+            "bar": state["chart_image_bytes"]["bar"],
+        },
     }
 
     return {"final_report": final_report}

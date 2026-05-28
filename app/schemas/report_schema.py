@@ -36,3 +36,4 @@ class ReportResponse(BaseModel):
     categories: list[CategoryReport]
     summary: str
     charts: dict
+    chart_bytes: dict | None = None
