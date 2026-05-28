@@ -87,6 +87,8 @@ jobs:
               -e CONFIDENCE_THRESHOLD=${{ secrets.CONFIDENCE_THRESHOLD }} \
               -e LOG_LEVEL=${{ secrets.LOG_LEVEL }} \
               -e S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }} \
+              -e LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }} \
+              -e LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }} \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
 
             # Run bot container

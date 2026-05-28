@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     MODEL_TEMPERATURE: float = 0.0
     CONFIDENCE_THRESHOLD: float = 0.75
 
+    # Observability
+    LANGFUSE_SECRET_KEY: str | None = None
+    LANGFUSE_PUBLIC_KEY: str | None = None
+    LANGFUSE_BASE_URL: str = "https://cloud.langfuse.com"
+
     model_config = SettingsConfigDict(
         env_file=".env" if os.getenv("APP_ENV", "dev") == "dev" else None,
         env_file_encoding="utf-8",
