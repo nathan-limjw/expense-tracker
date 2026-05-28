@@ -52,4 +52,5 @@ def get_report(input: ReportCreate, db: Session = Depends(get_db)):
         categories=final_report["categories"],
         summary=final_report["summary"],
         charts=final_report["charts"],
+        chart_bytes=final_report.get("chart_bytes"),
     )
