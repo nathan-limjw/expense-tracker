@@ -19,6 +19,7 @@ from app.schemas.expense_schema import (
 )
 from utils.db_helpers import format_month
 from utils.logger import get_logger
+from utils.observability import get_langfuse_callbacks
 
 logger = get_logger(__name__)
 
@@ -118,7 +119,12 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 
     try:
         logger.info("Invoking expense extraction agent...")
-        response = graph.invoke(input_state)
+        callbacks = get_langfuse_callbacks(
+            "expense_extraction",
+            expense.user_id,
+            {"input_length": len(expense.description)},
+        )
+        response = graph.invoke(input_state, config={"callbacks": callbacks})
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
