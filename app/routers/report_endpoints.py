@@ -7,6 +7,7 @@ from app.db.database import get_db
 from app.models.user import User
 from app.schemas.report_schema import ReportCreate, ReportResponse
 from utils.logger import get_logger
+from utils.observability import get_langfuse_callbacks
 
 logger = get_logger(__name__)
 graph = create_report_agent_graph()
@@ -31,7 +32,12 @@ def get_report(input: ReportCreate, db: Session = Depends(get_db)):
 
     try:
         logger.info("Invoking report agent...")
-        response = graph.invoke(input_state, config={"configurable": {"db": db}})
+        callbacks = get_langfuse_callbacks(
+            "report_generation", input.user_id, {"month": input.month}
+        )
+        response = graph.invoke(
+            input_state, config={"configurable": {"db": db}, "callbacks": callbacks}
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
