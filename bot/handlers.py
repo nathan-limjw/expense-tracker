@@ -112,9 +112,6 @@ async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = response.json()
     pdf_bytes = _generate_pdf(data, name)
-    print("DEBUG full keys:", list(data.keys()))
-    print("DEBUG chart_bytes raw:", data.get("chart_bytes"))
-    print("DEBUG charts:", data.get("charts"))
 
     await update.message.reply_document(
         document=io.BytesIO(pdf_bytes),
