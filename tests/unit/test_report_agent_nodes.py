@@ -1,3 +1,4 @@
+import base64
 from datetime import date
 
 import pytest
@@ -398,6 +399,15 @@ class TestPresenterNode:
         assert final_report["categories"] == mock_full_state["raw_data"]["categories"]
 
         assert final_report["summary"] == mock_full_state["financial_advice"]
+
+    def test_chart_bytes_are_base64_encoded(self, mock_full_state, mock_s3):
+        result = presenter_node(mock_full_state)
+
+        pie = result["final_report"]["chart_bytes"]["pie"]
+        bar = result["final_report"]["chart_bytes"]["bar"]
+
+        assert pie == base64.b64encode(b"fakepie").decode("utf-8")
+        assert bar == base64.b64encode(b"fakebar").decode("utf-8")
 
     def test_s3_upload_called_twice(self, mock_full_state, mock_s3):
         presenter_node(mock_full_state)

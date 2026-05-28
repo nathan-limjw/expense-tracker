@@ -115,7 +115,7 @@ def mock_full_state(mock_report_input, mock_raw_data):
         "input": mock_report_input,
         "raw_data": mock_raw_data,
         "financial_advice": "Find cheaper alternatives for transport",
-        "chart_image_bytes": {"pie": "fakepie", "bar": "fakebar"},
+        "chart_image_bytes": {"pie": b"fakepie", "bar": b"fakebar"},
     }
 
 
