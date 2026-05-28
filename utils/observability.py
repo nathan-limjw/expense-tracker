@@ -18,7 +18,10 @@ def get_langfuse_callbacks(trace_name: str, user_id: str, metadata: dict = {}):
             "metadata": {
                 "langfuse_trace_name": trace_name,
                 "user_id": str(user_id),
-                **{f"langfuse_meta_{key}": value for key, value in metadata.items()},
+                **{
+                    f"langfuse_meta_{key}": str(value)
+                    for key, value in metadata.items()
+                },
             }
         }
 
