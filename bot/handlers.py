@@ -1,3 +1,4 @@
+import base64
 import io
 
 import httpx
@@ -227,17 +228,13 @@ def _generate_pdf(data: dict, name: str) -> bytes:
     if data.get("chart_bytes"):
         elements.append(Paragraph("Charts", heading_style))
 
-        pie_bytes = data["chart_bytes"]["pie"]
-        if isinstance(pie_bytes, list):
-            pie_bytes = bytes(pie_bytes)
+        pie_bytes = base64.b64decode(data["chart_bytes"]["pie"])
         pie_img = Image(io.BytesIO(pie_bytes), width=10 * cm, height=10 * cm)
         elements.append(pie_img)
         elements.append(Paragraph("Spending by Category", caption_style))
         elements.append(Spacer(1, 8))
 
-        bar_bytes = data["chart_bytes"]["bar"]
-        if isinstance(bar_bytes, list):
-            bar_bytes = bytes(bar_bytes)
+        bar_bytes = base64.b64decode(data["chart_bytes"]["bar"])
         bar_img = Image(io.BytesIO(bar_bytes), width=14 * cm, height=8 * cm)
         elements.append(bar_img)
         elements.append(Paragraph("Spent vs Budget by Category", caption_style))

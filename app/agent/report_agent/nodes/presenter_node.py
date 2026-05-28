@@ -1,3 +1,5 @@
+import base64
+
 import boto3
 
 from app.agent.report_agent.schemas import ReportAgentState
@@ -41,8 +43,8 @@ def presenter_node(state: ReportAgentState):
         "summary": state["financial_advice"],
         "charts": {"pie": pie_url, "bar": bar_url},
         "chart_bytes": {
-            "pie": state["chart_image_bytes"]["pie"],
-            "bar": state["chart_image_bytes"]["bar"],
+            "pie": base64.b64encode(state["chart_image_bytes"]["pie"]).decode("utf-8"),
+            "bar": base64.b64encode(state["chart_image_bytes"]["bar"]).decode("utf-8"),
         },
     }
 
