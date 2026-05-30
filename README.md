@@ -28,6 +28,7 @@ This project is a full-stack application with a LangGraph-powered extraction pip
 | CI/CD | GitHub Actions → ECR → EC2 |
 | Reverse Proxy | nginx (SSL termination) |
 | Storage | AWS S3 (report charts) |
+| Observability | LangFuse (LLM tracing) |
 
 ---
 
@@ -92,6 +93,18 @@ flowchart LR
 2. **Analyst** — LLM generates personalised financial advice based on spending patterns
 3. **Visualiser** — generates pie and bar charts with matplotlib
 4. **Presenter** — assembles the final report and uploads charts to S3
+
+---
+## Observability
+
+Agent runs are traced end-to-end via LangFuse. Every expense submission and report generation creates a trace showing:
+
+- Per-node latency (extraction, validation, decision)
+- LLM prompt and response for each inference call
+- Token usage and estimated cost per request
+- Retry attempts and failure reasons when extraction fails
+
+Tracing is optional — if `LANGFUSE_PUBLIC_KEY` is not set, the app runs normally without it.
 
 ---
 
